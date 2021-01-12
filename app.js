@@ -12,6 +12,8 @@ const xml = require("xml");
 const DatabaseDriver = require("./dbdriver");
 const renderMiiFromHex = require("./src/rendermiifromhex");
 const Axios = require("axios");
+const Canvas = require("canvas");
+const Image = Canvas.Image;
 
 const db = new DatabaseDriver(path.join(__dirname, "users.db"));
 const gameDb = new DatabaseDriver(path.join(__dirname, "games.db"));
@@ -315,7 +317,7 @@ app.get("/wiiu", async function(req, res) {
     setUserAttrib(userID, "lastplayed", ["wiiu-" + gameID, Math.floor(Date.now() / 1000)]);
     res.status(200).send();
 
-    var banner = await getTag(userID).catch(function () {
+    await getTag(userID).catch(function () {
         res.status(404).render("notfound.pug");
         return
     });
@@ -412,7 +414,21 @@ app.get("/leaderboard/games", async function(req, res) {
 });
 
 app.get("/cover", async function(req, res) {
-
+    var game = req.query.game;
+    if (!game) {
+        res.status(500).send("Error 500 - No game provided.");
+    }
+    var consoletype = getConsoleType(game);
+    var covertype = getCoverType(consoletype);
+    game = game.replace("wii-", "").replace("wiiu-", "").replace("3ds-", "").replace("ds-", "");
+    var region = getGameRegion(game);
+    var extension = getExtension(covertype, consoletype);
+    var cache = await cacheGameCover(game, region, covertype, consoletype, extension);
+    if (cache) {
+        res.sendFile(path.resolve(dataFolder, "cache", `${consoletype}-${covertype}-${game}-${region}.png`));
+    } else {
+        res.status(500).send("Error 500 - Cache was not available.");
+    }
 });
 
 app.listen(port, async function() {
@@ -659,13 +675,7 @@ function getGameRegion(game) { // determine the game's region by its ID
     var chars = game.split("");
     var rc = chars[3];
     if (rc == "P") {
-        if (this.user.coverregion) {
-            if (this.user.coverregion.toUpperCase().length == 2) { // region names are 2 characters as you can see
-                return this.user.coverregion.toUpperCase();
-            }
-        } else {
-            return "EN";
-        }
+        return "EN"
     } else if (rc == "E") {
         return "US";
     } else if (rc == "J") {
@@ -712,8 +722,6 @@ function getExtension(covertype, consoletype) {
 function getCoverType(consoletype) {
     if (consoletype == "ds" || consoletype == "3ds") {
         return "box";
-    } else if (this.user.covertype) {
-        return this.user.covertype;
     } else {
         return "cover3D";
     }
@@ -756,12 +764,12 @@ function getCoverUrl(consoletype, covertype, region, game, extension) {
 }
 
 async function downloadGameCover(game, region, covertype, consoletype, extension) {
-    var can = new Canvas.Canvas(this.getCoverWidth(covertype), this.getCoverHeight(covertype, consoletype));
+    var can = new Canvas.Canvas(getCoverWidth(covertype), getCoverHeight(covertype, consoletype));
     var con = can.getContext("2d");
     var img;
 
-    img = await getImage(this.getCoverUrl(consoletype, covertype, region, game, extension));
-    con.drawImage(img, 0, 0, this.getCoverWidth(covertype), this.getCoverHeight(covertype, consoletype));
+    img = await getImage(getCoverUrl(consoletype, covertype, region, game, extension));
+    con.drawImage(img, 0, 0, getCoverWidth(covertype), getCoverHeight(covertype, consoletype));
     await savePNG(path.resolve(dataFolder, "cache", `${consoletype}-${covertype}-${game}-${region}.png`), can);
 }
 
@@ -773,19 +781,65 @@ async function cacheGameCover(game, region, covertype, consoletype, extension) {
         return true;
     }
     try {
-        await this.downloadGameCover(game, region, covertype, consoletype, extension);
+        await downloadGameCover(game, region, covertype, consoletype, extension);
     } catch(e) {
         try {
-            await this.downloadGameCover(game, "EN", covertype, consoletype, extension); // cover might not exist?
+            await downloadGameCover(game, "EN", covertype, consoletype, extension); // cover might not exist?
         } catch(e) {
             try {
-                await this.downloadGameCover(game, "US", covertype, consoletype, extension); // small chance it's US region
+                await downloadGameCover(game, "US", covertype, consoletype, extension); // small chance it's US region
             } catch(e) {
                 return false;
             }
         }
     }
     return true;
+}
+
+async function downloadGameCover(game, region, covertype, consoletype, extension) {
+    var can = new Canvas.Canvas(getCoverWidth(covertype), getCoverHeight(covertype, consoletype));
+    var con = can.getContext("2d");
+    var img;
+
+    img = await getImage(getCoverUrl(consoletype, covertype, region, game, extension));
+    con.drawImage(img, 0, 0, getCoverWidth(covertype), getCoverHeight(covertype, consoletype));
+    await savePNG(path.resolve(dataFolder, "cache", `${consoletype}-${covertype}-${game}-${region}.png`), can);
+}
+
+async function savePNG(out, c) {
+    return new Promise(function(resolve, reject) {
+        var t;
+        c.createPNGStream().pipe(fs.createWriteStream(out)).on("close", function() {
+            clearTimeout(t);
+            resolve();
+        });
+
+        t = setTimeout(() => {
+            console.log(out + " - savePNG Timed Out");
+            reject();
+        }, 7500);
+    });
+}
+
+async function getImage(source) {
+    var img = new Image();
+    return new Promise(function(resolve, reject) {
+        var t;
+        img.onload = function() {
+            clearTimeout(t);
+            resolve(img);
+        }
+        img.onerror = function(err) {
+            clearTimeout(t);
+            reject(err);
+        }
+        t = setTimeout(() => {
+            console.log(source + " - getImage Timed Out");
+            reject();
+        }, 7500);
+        console.log(source);
+        img.src = source;
+    });
 }
 
 module.exports = {
