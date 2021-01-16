@@ -3,7 +3,7 @@ const Canvas = require("canvas");
 const Image = Canvas.Image;
 
 async function savePNG(out, c) {
-    return new Promise(function(resolve) {
+    return new Promise((resolve) => {
         c.createPNGStream().pipe(fs.createWriteStream(out)).on("close", resolve());
     });
 }
@@ -11,10 +11,10 @@ async function savePNG(out, c) {
 async function getImage(source) {
     var img = new Image();
     return new Promise((resolve, reject) => {
-        img.onload = resolve(img);
-        img.onerror = reject(err);
+        img.onload = () => {resolve(img)};
+        img.onerror = (err) => {reject(err)};
         img.src = source;
-    });
+    })
 }
 
 module.exports = {
