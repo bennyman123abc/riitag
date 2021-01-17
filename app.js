@@ -167,9 +167,9 @@ app.get("/create", checkAuth, async (req, res) => {
     userManager.create(req.user, generateRandomKey());
     userManager.edit(req.user.id, { "avatar": req.user.avatar });
 
-    var banner = await getTag(req.user.id).catch(() => {
+    await getTag(req.user.id).catch(() => {
         res.status(404).render("notfound.pug");
-        return
+        return;
     });
 
     res.redirect(req.user.admin ? "/admin" : `/${req.user.id}`);
@@ -182,8 +182,13 @@ function getTag(id) {
     })
 }
 
+// DEPRECATED: Required for compat
+app.get("^/:id([0-9]+)/tag.max.png", (req, res) => {
+    res.redirect(`/${req.params.id}/tag.png`);
+});
 
 app.get("^/:id([0-9]+)/tag.png", async (req, res) => {
+    var small = req.query.size == "small";
     try {
         if (!fs.existsSync(dataManager.build("tag")))
             fs.mkdirSync(dataManager.build("tag"));
@@ -191,7 +196,7 @@ app.get("^/:id([0-9]+)/tag.png", async (req, res) => {
         if (!fs.existsSync(dataManager.build("users", `${req.params.id}.json`)) || !fs.existsSync(dataManager.build("tag", `${req.params.id}.png`)))
             res.status(404).render("notfound.pug");
 
-        var file = dataManager.build("tag", `${req.params.id}.png`);
+        var file = dataManager.build("tag", `${req.params.id}${!small ? ".max" : ""}.png`);
         var s = fs.createReadStream(file);
 
         s.on('open', () => {

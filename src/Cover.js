@@ -1,6 +1,7 @@
 const { Canvas, Image } = require("canvas"),
       { savePNG, getImage } = require("./utils"),
-      dataManager = require("./data-manager");
+      dataManager = require("./data-manager"),
+      fs = require("fs");
 
 /**
  * The base Cover constructor and de-constructor.
@@ -11,12 +12,13 @@ class Cover
     {
         this.game = game.substr(1);
         this.user = user;
+        this.cacheFile = dataManager.cache(`${this.console}-${this.coverType}-${this.game}-${this.region}.png`);
     }
 
     /**
      * Use the game's ID to determine the current region. 
      */
-    getRegion() {
+    get region() {
         var regionCode = this.game[3];
 
         switch (regionCode) {
@@ -40,7 +42,7 @@ class Cover
      * Use the ID structure to determine the current console.
      * @param {string} game 
      */
-    getConsole() {
+    get console() {
         var consoleCode = this.game[0], // Obtain the console-level code.
             consoleBase = this.game.substr(0, this.game.indexOf("-")); // Strip everything behind the hyphen to obtain the base.
 
@@ -71,8 +73,8 @@ class Cover
      * @param {string} cover
      * @param {string} console
      */
-    getExtension() {
-        if (this.getConsole() != "wii" && this.getType() == "cover")
+    get extension() {
+        if (this.console != "wii" && this.coverType == "cover")
             return "jpg";
 
         return "png";
@@ -82,9 +84,9 @@ class Cover
      * Obtain the type of cover based on console type.
      * @param {string} consoletype 
      */
-    getType()
+    get coverType()
     {
-        switch (this.getConsole()) {
+        switch (this.console) {
             case "ds":
             case "3ds":
                 return "box";
@@ -98,11 +100,11 @@ class Cover
      * @param {string} type 
      * @returns {Vector2D}
      */
-    getDimensions()
+    get dimensions()
     {
-        switch (this.getType()) {
+        switch (this.coverType) {
             case "cover":
-                return {width: 160, height: (this.getConsole() == "ds" || this.getConsole()=="3ds") ? 144 : 224};
+                return {width: 160, height: (this.console == "ds" || this.console == "3ds") ? 144 : 224};
             case "cover3D":
                 return {width: 176, height: 248};
             case "disc":
@@ -115,14 +117,20 @@ class Cover
 
     async downloadCover()
     {
-        let dimensions = this.getDimensions();
+        let dimensions = this.dimensions;
         let canvas = new Canvas(dimensions.width, dimensions.height),
             ctx = canvas.getContext("2d");
 
         let image = await getImage(module.exports.getCoverUrl(this));
         ctx.drawImage(image, 0, 0, dimensions.width, dimensions.height);
-        await savePNG(dataManager.build("cache", `${this.game}.png`), canvas);
+        await savePNG(this.cacheFile, canvas);
         return canvas;
+    }
+
+    async getCoverImage()
+    {
+        if (!fs.existsSync(this.cacheFile)) await this.downloadCover();
+        return await getImage(this.cacheFile);
     }
 }
 
@@ -134,5 +142,5 @@ module.exports = Cover;
 * @returns {string}
 */
 module.exports.getCoverUrl = (cover) => {
-   return `https://art.gametdb.com/${cover.getConsole()}/${cover.getType()}/${cover.getRegion()}/${cover.game}.${cover.getExtension()}`;
+   return `https://art.gametdb.com/${cover.console}/${cover.coverType}/${cover.region}/${cover.game}.${cover.extension}`;
 }

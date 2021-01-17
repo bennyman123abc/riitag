@@ -11,12 +11,21 @@ class DataManager {
 }
 
 module.exports = DataManager;
+
 /**
 * Retrieve data from one of the internal data folders.
 * @param {string[]} folder 
 */
 module.exports.build = (...part) => {
    return path.resolve(this.dataFolder, part.join("/"))
+}
+
+/**
+ * Retrieve a path for a cached file.
+ * @param {string[]} file
+ */
+module.exports.cache = (part) => {
+    module.exports.build("cache", part);
 }
 
 module.exports.DataType = {
@@ -83,27 +92,3 @@ module.exports.getRegions = () => {
 module.exports.getFonts = () => {
     return JSON.parse(fs.readFileSync(module.exports.build("meta", "fonts.json")))
 }
-
-// /**
-//  * Get a 
-//  */
-// module.exports.getData = (dataType) => {
-//    switch(dataType) {
-//       case module.exports.build.DataType.BACKGROUNDS:
-//          return module.exports.build.getBackgrounds();
-//       case module.exports.build.DataType.OVERLAYS:
-//          return module.exports.build.getOverlays();
-//       case module.exports.build.DataType.COINS:
-//          return module.exports.build.getCoins();
-//       case module.exports.build.DataType.COVERTYPES:
-//          return module.exports.build.getCoverTypes();
-//       case module.exports.build.DataType.FLAGS:
-//          return module.exports.build.getFlags();
-//       case module.exports.build.DataType.FONTS:
-//          return module.exports.build.getFonts();
-//       case module.exports.build.DataType.REGIONS:
-//          return module.exports.build.getRegions();
-//       default:
-//          return null;
-//    }
-// }

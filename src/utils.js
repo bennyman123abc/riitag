@@ -4,7 +4,7 @@ const Image = Canvas.Image;
 
 async function savePNG(out, c) {
     return new Promise((resolve) => {
-        c.createPNGStream().pipe(fs.createWriteStream(out)).on("close", resolve());
+        c.createPNGStream().pipe(fs.createWriteStream(out)).on("close", resolve);
     });
 }
 

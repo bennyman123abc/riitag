@@ -1,10 +1,14 @@
+const { getImage, savePNG } = require("./utils");
+
 const dataManager = require("./data-manager"),
       DatabaseDriver = require("../dbdriver"),
       db = new DatabaseDriver(dataManager.build("../users.db")),
-      fs = require("fs");
+      fs = require("fs"),
+      { Canvas, Image } = require("canvas"),
+      path = require("path");
 
 class UserManager {
-    
+
 }
 
 module.exports = UserManager;
@@ -94,4 +98,22 @@ module.exports.create = async (user, randomKey) => {
 
     if (!(await module.exports.getKey(user.id)))
         db.insert("users", ["snowflake", "key"], [user.id, randomKey]);
+}
+
+module.exports.cacheAvatar = async (user) => {
+    let canvas = new Canvas(512, 512),
+        ctx = canvas.getContext("2d");
+
+    const avatarFolder = dataManager.build("avatars");
+
+    if (!fs.existsSync(avatarFolder)) fs.mkdirSync(avatarFolder);
+    
+    try {
+        let img = await getImage(`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.jpg?size=512`);
+        ctx.drawImage(img, 0, 0, 512, 512);
+        await savePNG(path.resolve(avatarFolder, `${user.id}.png`), canvas);
+        return true;
+    } catch(e) {
+        return false;
+    }
 }

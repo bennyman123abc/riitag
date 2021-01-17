@@ -136,9 +136,9 @@ class Tag extends events.EventEmitter{
      * @returns {boolean} Whether or not the operation succeeded.
      */
     async drawGameCover(game) {
-        game = game.replace(/\w{0,5}(?=-)/, "");
-
-        let image = await getImage(dataManager.build("cache", `${game.substr(1)}.png`));
+        game = game.replace(/.*-/, "");
+        let cover = new Cover(game, this.user);
+        let image = cover.getCoverImage();
         await this.drawImage(image, this.coverCurrentX, this.coverCurrentY);
         this.coverCurrentX += this.coverIncrementX;
         this.coverCurrentY += this.coverIncrementY;
@@ -151,8 +151,8 @@ class Tag extends events.EventEmitter{
         if (!this.overlay.avatar)
             return;
 
-        await this.cacheAvatar();
-        await this.drawResizedImage(dataManager.build("avatar", this.user.id), this.overlay.avatar.x, this.overlay.avatar.y, this.overlay.avatar.size, this.overlay.avatar.size);
+        await userManager.cacheAvatar(this.user);
+        await this.drawResizedImage(dataManager.build("avatars", `${this.user.id}.png`), this.overlay.avatar.x, this.overlay.avatar.y, this.overlay.avatar.size, this.overlay.avatar.size);
     }
 
     /**
@@ -322,7 +322,10 @@ class Tag extends events.EventEmitter{
             await this.drawMii();
         }
 
-        await savePNG(dataManager.build("tag", `${this.user.id}.png`), this.canvas);
+        await savePNG(dataManager.build("tag", `${this.user.id}.png`), this.canvas).catch(err => {
+            console.log("Image couldn't be saved.");
+            console.log(err);
+        });
         this.emit("done");
     }
 }
