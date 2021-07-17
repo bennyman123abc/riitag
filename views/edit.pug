@@ -2,8 +2,27 @@ extends head
 
 mixin miiUploadBox()
     hr.big-space-top(style="border-top: 2px solid rgba(0, 0, 0, 0.1);")
-    h5.mb-0.big-space-top Upload Mii
+    h5.mb-0.big-space-top Upload a Mii Binary File
+    br
+    h6.mb-0 Uploads may take a second. Please do not save your edits until a confirmation message appears!
     input#mii-file(type="file").space-top
+
+mixin miiQRUploadBox()
+    hr.big-space-top(style="border-top: 2px solid rgba(0, 0, 0, 0.1);")
+    h5.mb-0.big-space-top Upload a QR Code
+    h6.mb-0 Warning: Some QR Codes may not read properly.
+    h6.mb-0 If your Mii doesn't show up, try a different upload type!
+    h6.mb-0 Accepts PNGs and JPEG/JPG Files.
+    h6.mb-0 Tomodachi Life and Miitopia QR codes are supported too!
+    br
+    h6.mb-0 Uploads may take a second. Please do not save your edits until a confirmation message appears!
+    input#mii-QRfile(type="file").space-top
+
+mixin miiEntryNumberBox()
+    hr.big-space-top(style="border-top: 2px solid rgba(0, 0, 0, 0.1);")
+    h5.mb-0.big-space-top Check Mii Out Channel Entry Number
+    h6.mb-0 Enter a Check Mii Out Channel Entry Number here! It can be entered with or without the dashes.
+    input#mii-entrynumber(type="text" name="miinumber" value=jdata.mii_number).space-top
 
 block content
     - var soverlay
@@ -166,7 +185,7 @@ block content
                                                 .col-12
                                                     h5.mb-0 Nickname
                                                     input(type="text" name="name" value=jdata.name id="nickname").space-top.big-space-bottom
-                                                    h5.mb-0 Wii Number
+                                                    h5.mb-0 Friend Code / Comments
                                                     input(type="text" name="wiinumber" value=jdata.friend_code id="wiinumber").space-top.big-space-bottom
                                                     h5.mb-0 Games
                                                     h6.mb-0 Game IDs should be separated by a semicolon (;). Using a USB Loader allows games to appear automagically.
@@ -188,22 +207,77 @@ block content
                                                         b.alert-success Your Mii has successfully been uploaded!
                                                     h5.mb-0 Mii Preview
                                                     - var miiImg
-                                                    - if (guestList.includes(jdata.mii_data)) { miiImg = `/miis/guests/${jdata.mii_data}.png` } else { miiImg = `http://miicontestp.wii.rc24.xyz/cgi-bin/render.cgi?data=${jdata.mii_data}` }
+                                                    - if (guestList.includes(jdata.mii_data)) { miiImg = `/miis/guests/${jdata.mii_data}.png`; } else if (jdata.mii_data == "" || jdata.mii_data == null || jdata.mii_data.length >= 1000) { miiImg = `/miis/guests/undefined.png`; } else if (jdata.mii_data.length == 94) { miiImg = `https://studio.mii.nintendo.com/miis/image.png?data=${jdata.mii_data}&amp;type=face&amp;width=512&amp;bgColor=FFFFFF00`; } else { miiImg = `http://miicontestp.wii.rc24.xyz/cgi-bin/render.cgi?data=${jdata.mii_data}`; }
                                                     img(src=miiImg width="25%" id="mii-img" alt="Mii Preview").no-shadow
                                                     h5.mb-0 Select a Mii
                                                     select.big-space-top.space-bottom#mii-select
-                                                        each k,v in guests
-                                                            option(value=v selected=(jdata.mii_data == v))= k
-                                                        - var guestList = Array.from(Object.keys(guests));
-                                                        - var customSelected = jdata.mii_data != "undefined" && !guestList.includes(jdata.mii_data)
-                                                        option(value="custom" selected=(customSelected)) Upload Your Own Mii
-                                                    if customSelected
-                                                        div#mii-box(style="")
-                                                            +miiUploadBox
-                                                    else
+                                                        - var CMOCSelected = !guestList.includes(jdata.mii_data)
+                                                        - var guestSelected = guestList.includes(jdata.mii_data)
+                                                        option(value="CMOC" selected=(CMOCSelected)) Use a Check Mii Out Channel Entry Number
+                                                        option(value="Gen2" selected=(gen2Selected)) Use a 3DS/WiiU/Miitomo QR Code
+                                                        option(value="Upload" selected=(uploadSelected)) Upload a Mii Binary File from Wii
+                                                        option(value="Guest" selected=(guestSelected)) Use a Guest Mii
+                                                    if CMOCSelected
+                                                        div#guest-selection(style="display: none;")
+                                                            select.big-space-top.space-bottom#guest-select
+                                                                option(value="NoSelection" selected=(noneSelected)) -----
+                                                                    each k,v in guests
+                                                                        option(value=v selected=(jdata.mii_data == v))= k
+                                                                    - var guestList = Array.from(Object.keys(guests));
+                                                                    - var noneSelected = true
+                                                        div#mii-number(style="")
+                                                            +miiEntryNumberBox
                                                         div#mii-box(style="display: none;")
                                                             +miiUploadBox
+                                                        div#mii-gen2(style="display: none;")
+                                                            +miiQRUploadBox
+                                                    else if uploadSelected
+                                                        div#guest-selection(style="display: none;")
+                                                            select.big-space-top.space-bottom#guest-select
+                                                                option(value="NoSelection" selected=(noneSelected)) -----
+                                                                    each k,v in guests
+                                                                        option(value=v selected=(jdata.mii_data == v))= k
+                                                                    - var guestList = Array.from(Object.keys(guests));
+                                                                    - var noneSelected = true
+                                                        div#mii-number(style="display: none;")
+                                                            +miiEntryNumberBox
+                                                        div#mii-box(style="")
+                                                            +miiUploadBox
+                                                        div#mii-gen2(style="display: none;")
+                                                            +miiQRUploadBox
+                                                    else if guestSelected
+                                                        div#guest-selection(style="")
+                                                            select.big-space-top.space-bottom#guest-select
+                                                                option(value="NoSelection" selected=(noneSelected)) -----
+                                                                    each k,v in guests
+                                                                        option(value=v selected=(jdata.mii_data == v))= k
+                                                                    - var guestList = Array.from(Object.keys(guests));
+                                                                    - var noneSelected = true
+                                                        div#mii-number(style="display: none;")
+                                                            +miiEntryNumberBox
+                                                        div#mii-box(style="display: none;")
+                                                            +miiUploadBox
+                                                        div#mii-gen2(style="display: none;")
+                                                            +miiQRUploadBox
+                                                    else if gen2Selected
+                                                        div#guest-selection(style="display: none;")
+                                                            select.big-space-top.space-bottom#guest-select
+                                                                option(value="NoSelection" selected=(noneSelected)) -----
+                                                                    each k,v in guests
+                                                                        option(value=v selected=(jdata.mii_data == v))= k
+                                                                    - var guestList = Array.from(Object.keys(guests));
+                                                                    - var noneSelected = true
+                                                        div#mii-number(style="display: none;")
+                                                            +miiEntryNumberBox
+                                                        div#mii-box(style="display: none;")
+                                                            +miiUploadBox
+                                                        div#mii-gen2(style="")
+                                                            +miiQRUploadBox
                                                     input#mii-data(type="text" name="miidata" style="display: none;" value=jdata.mii_data)
+                                                    if guestList.includes(jdata.mii_data)
+                                                        input#mii-type(type="text" name="MiiType" style="display: none;" value="Guest")
+                                                    if !guestList.includes(jdata.mii_data)
+                                                        input#mii-type(type="text" name="MiiType" style="display: none;" value="CMOC")
                 .row
                     .col-md-12
                         .card.big-space-bottom

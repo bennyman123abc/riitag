@@ -195,14 +195,14 @@ class Tag extends events.EventEmitter{
             if (this.user.font == "default" || this.overlay[type].force_font == "true") {
                 return this.overlay[type].font_family;
             } else {
-                return this.user.font;
+                if (this.user.font) {
+                    return this.user.font;
+                } else {
+                    return defaultFont;
+                }
             }
         } else {
-            if (this.user.font == "default") {
-                return defaultFont;
-            } else {
-                return this.user.font;
-            }
+            return defaultFont;
         }
     }
 
@@ -257,7 +257,7 @@ class Tag extends events.EventEmitter{
         var con = can.getContext("2d");
         var img;
         try {
-            img = await getImage(`https://cdn.discordapp.com/avatars/${this.user.id}/${this.user.avatar}.jpg?size=512`);
+            img = await getImage(`https://cdn.discordapp.com/avatars/${this.user.id}/${this.user.avatar}.png?size=512`);
             con.drawImage(img, 0, 0, 512, 512);
             await savePNG(path.resolve(dataFolder, "avatars", `${this.user.id}.png`), can);
         } catch(e) {
@@ -281,10 +281,32 @@ class Tag extends events.EventEmitter{
                     inc = 80;
                 }
             }
-            await this.drawImage(path.resolve(dataFolder, "cache", `${consoletype}-${covertype}-${game}-${region}.png`), this.covCurX, this.covCurY + inc);
-            // console.log(game);
-            this.covCurX += this.covIncX;
-            this.covCurY += this.covIncY;
+
+            var coverPath = `${consoletype}-${covertype}-${game}-${region}.png`;
+
+            if (!fs.existsSync(path.resolve(dataFolder, "cache", coverPath))) {
+                var allRegions = ["US", "EN", "FR", "DE", "ES", "IT", "NL", "PT", "AU", "SE", "DK", "NO", "FI", "TR"];
+                
+                for (var r in allRegions) {
+                    coverPath = `${consoletype}-${covertype}-${game}-${allRegions[r]}.png`;
+
+                    if (fs.existsSync(path.resolve(dataFolder, "cache", coverPath))) {
+                        await this.drawImage(path.resolve(dataFolder, "cache", coverPath), this.covCurX, this.covCurY + inc);
+
+                        this.covCurX += this.covIncX;
+                        this.covCurY += this.covIncY;
+            
+                        break;
+                    }
+                }
+            } else {
+    await this.drawImage(path.resolve(dataFolder, "cache", coverPath), this.covCurX, this.covCurY + inc);
+
+    this.covCurX += this.covIncX;
+    this.covCurY += this.covIncY;
+}
+
+// console.log(game);
         }
         return cache;
     }
@@ -343,13 +365,6 @@ class Tag extends events.EventEmitter{
         for (var font of fs.readdirSync(path.resolve(dataFolder, "fonts"))) {
             await this.loadFont(font);
         }
-    }
-
-    getCoins() {
-        if (this.user.coins > this.overlay.coin_count.max) {
-            return this.overlay.coin_count.max;
-        }
-        return this.user.coins;
     }
 
     loadOverlay(file) {
@@ -455,28 +470,16 @@ class Tag extends events.EventEmitter{
             this.overlay.coin_count.font_size,
             this.overlay.coin_count.font_style,
             this.overlay.coin_count.font_color,
-            this.getCoins(),
+            this.user.coins,
             this.overlay.coin_count.x,
             this.overlay.coin_count.y);
 
         // avatar
         if (this.user.useavatar == "true") {
-            if (this.overlay.avatar.background) {
-                await this.drawImage(path.resolve(dataFolder, this.overlay.avatar.background),
-                    this.overlay.avatar.background_x,
-                    this.overlay.avatar.background_y
-                );
-            }
             await this.drawAvatar();
         }
 
         if (this.user.usemii == "true") {
-            if (this.overlay.mii.background) {
-                await this.drawImage(path.resolve(dataFolder, this.overlay.avatar.background),
-                    this.overlay.mii.background_x,
-                    this.overlay.mii.background_y
-                );
-            }
             await this.drawMii();
         }
 

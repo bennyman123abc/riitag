@@ -31,7 +31,7 @@ block content
                                 strong Region: 
                                 | #{flags[tuser.region]}
                                 br
-                                strong Wii Number: 
+                                strong Friend Code / Comments: 
                                 | #{tuser.friend_code}
                                 br
                                 each overlay in overlays
@@ -41,6 +41,17 @@ block content
                                 br
                                 if user && tuser.id == user.id
                                     a(href="/edit" type="button" class="btn btn-primary space-top") Edit Your Tag
+                                if user && user.admin
+                                    a(href=`/admin/refresh/${tuser.id}` type="button" class="btn btn-primary space-top space-left") Refresh Tag
+                                    //- if tuser.id != user.id
+                                    //-     button(type="button" class="btn btn-danger" data-toggle="modal" data-target="#delete-warning-modal") Delete Tag
+                                    br
+                                if user && tuser.id == user.id
+                                    a(href=`/${id}/riitag.wad` type="button" class="btn btn-secondary space-top") Download RiiTag Channel
+                                    br
+                                    span.text-white 
+                                        small See <a href="https://wii.guide/riitag#riitag-channel">this page</a> for information about this channel.
+                                    
             .row
                 .col-md-6
                     .card

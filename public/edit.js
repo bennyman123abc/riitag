@@ -17,7 +17,7 @@ function showPassword(inputBoxID, inputButtonID) {
     }
 }
 
-function fetch(uri) {
+function httpFetch(uri) {
     var res = null;
     var x = new XMLHttpRequest();
     x.open("GET", uri, false);
@@ -29,11 +29,11 @@ function fetch(uri) {
 }
 
 function getOverlay(overlayFile) {
-    return fetch(overlayFile);
+    return httpFetch(overlayFile);
 }
 
 function getUser() {
-    var j = fetch(`/users/${uid}.json`);
+    var j = httpFetch(`/users/${uid}.json`);
     if (j) {
         return JSON.parse(j);
     } else {
@@ -47,6 +47,7 @@ var sel3 = document.getElementById('overlay');
 var sel4 = document.getElementById('coin');
 var sel6 = document.getElementById('font');
 var sel7 = document.getElementById('mii-select');
+var sel8 = document.getElementById('guest-select');
 
 var miiUploadButton = document.getElementById('mii-upload');
 
@@ -93,24 +94,89 @@ sel6.onchange = function () {
 
 sel7.onchange = function () {
     miiImg = document.getElementById("mii-img");
-
-    if (this.value == "custom") {
+    
+    if (this.value == "Upload") {
         unhideMiiUpload();
+        hideMiiGen2();
+        hideMiiNumber();
+        hideGuest();
         document.getElementById("mii-data").value = user.mii_data;
+        document.getElementById("mii-number").value = "";
+        document.getElementById("mii-type").value = this.value;
+    } else if (this.value == "CMOC") {
+        hideMiiUpload();
+        hideMiiGen2();
+        unhideMiiNumber();
+        hideGuest();
+        document.getElementById("mii-data").value = user.mii_data;
+        document.getElementById("mii-number").value = user.mii_number;
+        document.getElementById("mii-type").value = this.value;
+    } else if (this.value == "Gen2") {
+        hideMiiUpload();
+        unhideMiiGen2();
+        hideMiiNumber();
+        hideGuest();
+        document.getElementById("mii-data").value = user.mii_data;
+        document.getElementById("mii-number").value = "";
+        document.getElementById("mii-type").value = this.value;
+    } else if (this.value == "Guest") {
+        hideMiiUpload();
+        hideMiiGen2();
+        hideMiiNumber();
+        unhideGuest();
+        document.getElementById("mii-type").value = this.value;
     } else {
         hideMiiUpload();
+        hideMiiGen2();
+        hideMiiNumber();
+        hideGuest();
         document.getElementById("mii-data").value = this.value;
+        document.getElementById("mii-number").value = "";
+        document.getElementById("mii-type").value = this.value;
     }
 
-    if (guestList.includes(this.value)) {
-        miiImg.src = `/miis/guests/${this.value}.png`;
-    } else { 
+    if (guestList.includes(user.mii_data)) {
+        miiImg.src = `/miis/guests/${user.mii_data}.png`;
+    } else if (user.mii_data == "" || user.mii_data == null || user.mii_data.length >= 1000) {
+        miiImg.src = `/miis/guests/undefined.png`;
+    } else if (user.mii_data.length == 94){
+        miiImg.src = `https://studio.mii.nintendo.com/miis/image.png?data=${user.mii_data}&amp;type=face&amp;width=512&amp;bgColor=FFFFFF00`;
+    } else {
         miiImg.src = `http://miicontestp.wii.rc24.xyz/cgi-bin/render.cgi?data=${user.mii_data}`;
     }
 }
 
+sel8.onchange = function () {
+    miiImg = document.getElementById("mii-img");
+
+    if (this.value == "NoSelection") {
+        document.getElementById("mii-data").value = user.mii_data;
+        document.getElementById("mii-number").value = "";
+    }
+
+    if (guestList.includes(this.value)) {
+        document.getElementById("mii-data").value = this.value;
+        document.getElementById("mii-number").value = "";
+        miiImg.src = `/miis/guests/${this.value}.png`;
+    } else {
+        if (guestList.includes(user.mii_data)) {
+            miiImg.src = `/miis/guests/${user.mii_data}.png`;
+        } else if (user.mii_data == "" || user.mii_data == null || user.mii_data.length >= 1000) {
+            miiImg.src = `/miis/guests/undefined.png`;
+        } else if (user.mii_data.length == 94){
+            miiImg.src = `https://studio.mii.nintendo.com/miis/image.png?data=${user.mii_data}&amp;type=face&amp;width=512&amp;bgColor=FFFFFF00`;
+        } else {
+            miiImg.src = `http://miicontestp.wii.rc24.xyz/cgi-bin/render.cgi?data=${user.mii_data}`;
+        }
+    }
+}
+
 var miiUploadBox = document.getElementById("mii-box");
+var miiEntryNumberBox = document.getElementById("mii-number");
+var miiGen2 = document.getElementById("mii-gen2");
+var miiGuest = document.getElementById("guest-selection");
 var miiErrorBox = document.getElementById("mii-error-box");
+var miiGuest = document.getElementById("guest-selection");
 
 function unhideMiiUpload() {
     miiUploadBox.style = "";
@@ -118,6 +184,30 @@ function unhideMiiUpload() {
 
 function hideMiiUpload() {
     miiUploadBox.style = "display: none;";
+}
+
+function unhideMiiNumber() {
+    miiEntryNumberBox.style = "";
+}
+
+function hideMiiNumber() {
+    miiEntryNumberBox.style = "display: none;";
+}
+
+function unhideGuest() {
+    miiGuest.style = "";
+}
+
+function hideGuest() {
+    miiGuest.style = "display: none;";
+}
+
+function unhideMiiGen2() {
+    miiGen2.style = "";
+}
+
+function hideMiiGen2() {
+    miiGen2.style = "display: none;";
 }
 
 function unhideMiiError() {
@@ -139,8 +229,34 @@ function showMiiSuccess() {
     hideMiiError();
 }
 
+document.getElementById('mii-QRfile').onchange = async function () {
+
+    let formData = new FormData();
+    var data = document.getElementById('mii-QRfile').files[0];
+    formData.append("platform", "gen2");
+    formData.append("data", data);
+    hideMiiError();
+    try {
+        let r = await fetch('https://miicontestp.wii.rc24.xyz/cgi-bin/studio.cgi', {method: "POST", body: formData})
+            .then(response => response.json())
+            .then(data => {
+                mii = data.mii;
+            });
+        document.getElementById("mii-data").value = mii;
+        miiImg.src = `https://studio.mii.nintendo.com/miis/image.png?data=${mii}&amp;type=face&amp;width=512&amp;bgColor=FFFFFF00`;
+        showMiiSuccess();
+    } catch (e) {
+        if (e instanceof TypeError) {
+            showMiiError("Unable to use this QR code. Try again!");
+        } else {
+            console.log('Error when fetching', e);
+        }
+    }
+}
+
 document.getElementById('mii-file').onchange = function () {
     var file = document.getElementById('mii-file').files[0];
+    hideMiiError();
     if (!file) {
         console.log("No file");
         showMiiError("No file has been selected.");
@@ -163,6 +279,7 @@ document.getElementById('mii-file').onchange = function () {
             return ("0" + (byte & 0xFF).toString(16)).slice(-2);
         }).join('');
         document.getElementById("mii-data").value = hexString;
+        var miiImg = "";
         miiImg.src = `http://miicontestp.wii.rc24.xyz/cgi-bin/render.cgi?data=${hexString}`;
         showMiiSuccess();
         console.log("Set data to " + hexString);
